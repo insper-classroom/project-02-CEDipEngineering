@@ -10,11 +10,19 @@ As can be seen in the Farama Petting Zoo documentation page, this environment is
 
 !['Gif of board game go'](/img/classic_go.gif)
 
-The goal of the game is to capture stones of your oponent's color, which can be accomplished by completely surrounding them with your stones. The game can be played in many different board sizes, and rules differ greatly according to period and region, however most traditionally the game is played in 19x19 format, however beginners often play in a 9x9 or 13x13 configuration for a quicker match.
+The goal of the game is to capture stones of your oponent's color, which can be accomplished by completely surrounding them with your stones. The game can be played in many different board sizes, and rules differ greatly according to period and region, however most traditionally the game is played in 19x19 format, altough beginners often play in a 9x9 or 13x13 configuration for quicker matches.
 
 **Implementation**
 ======================
 
-The implementation will utilize PyTorch to execute the training, and will possibly be made using the DDQN or Reinforcement policy models. The expected result is an agent capable of playing Go against an beginner/intermediate human player.
+The implementation will utilize PyTorch as backend for training and testing, and will possibly be made using the DDQN or Reinforcement policy models.
+
+As a later step, it was considered to have a observation state encoder to allow for board size abstraction, and possibly improve model abstraction and training speed.
+
+**Expected Results:**
+======================
+
+The expected result is an agent capable of playing Go against an beginner/intermediate human player.
+
 
 
