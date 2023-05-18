@@ -19,6 +19,8 @@ The implementation will utilize PyTorch as backend for training and testing, and
 
 As a later step, it was considered to have a observation state encoder to allow for board size abstraction, and possibly improve model abstraction and training speed.
 
+A library called Tianshou was found to implement a lot of the necessary functionality. Their docs are available in a [176 page pdf](https://tianshou.readthedocs.io/_/downloads/en/master/pdf/) and also in their [github](https://github.com/thu-ml/tianshou/tree/master).
+
 **Expected Results:**
 ======================
 
