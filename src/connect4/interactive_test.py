@@ -55,7 +55,7 @@ class ImageWindow:
             env.step(model_action_ppo(obs, DETERMINISTIC))
             obs, r, term, trunc, _ = env.last()
             if r != 0:
-                if term or trunc:
+                if term or trunc and r > 0:
                     print("You win! The AI made an illegal action!")
                 else:
                     print("Game Over! You lose!")
@@ -83,11 +83,12 @@ def model_action_ppo(obs: dict, deterministic: bool = True) -> int:
         action = dist.sample().item()
     else: 
         action = logits.argmax(-1).item()
-    print(logits, action)
+    # print(logits, action)
     return action
 
 if __name__ == '__main__':
 
+    MODEL_PATH = "log/c4/sppo_vs_pre2/ckpt/23-05-23-00_30_03_ckpt_1.pth"
 
     # Start env
     env = connect_four_v3.env(render_mode="rgb_array")
@@ -98,12 +99,12 @@ if __name__ == '__main__':
 
     # Make agent    
     agent = make_ppo_agent(softmax=True)
-    state_dict = torch.load("log/c4/sppo_vs_pre/ckpt/21-05-23-22_49_49_ckpt_0.pth")
+    state_dict = torch.load(MODEL_PATH)
     agent.load_state_dict(state_dict)
 
     # Agent starts
-    # obs, *_ = env.last()
-    # env.step(model_action_ppo(obs, deterministic=DETERMINISTIC))
+    obs, *_ = env.last()
+    env.step(model_action_ppo(obs, deterministic=DETERMINISTIC))
 
     # Draw window
     root = tk.Tk()
