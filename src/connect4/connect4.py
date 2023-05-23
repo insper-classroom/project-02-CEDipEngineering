@@ -9,6 +9,7 @@ Modified by: CEDip (https://github.com/CEDipEngineering)
 """
 
 import os
+from datetime import datetime
 from collections import deque
 from typing import Optional, Tuple, Callable
 
@@ -20,10 +21,10 @@ from tianshou.data import Collector, VectorReplayBuffer
 from tianshou.env import DummyVectorEnv, SubprocVectorEnv
 from tianshou.env.pettingzoo_env import PettingZooEnv
 from tianshou.policy import BasePolicy, DQNPolicy, MultiAgentPolicyManager, RandomPolicy, PPOPolicy
-from tianshou.trainer import offpolicy_trainer
+from tianshou.trainer import offpolicy_trainer, onpolicy_trainer
 from tianshou.utils import TensorboardLogger
 
-from agents import make_dqn_agent
+from agents import make_dqn_agent, make_ppo_agent
 # from resnet18 import ResNet, BasicBlock
 
 from pettingzoo.classic import connect_four_v3
@@ -42,15 +43,15 @@ def _get_multi_agents(
 _get_env = lambda : PettingZooEnv(connect_four_v3.env()) # This function is needed to provide callables for DummyVectorEnv.
 
 if __name__ == "__main__":
-    N_TRAIN_ENVS        = 32
+    N_TRAIN_ENVS        = 40
     N_TEST_ENVS         = 100
     REPLAY_BUFFER_LEN   = 50_000    
     BATCH_SIZE          = 128
-    MAX_EPOCH           = 500 # Has early stopping, can stop as soon as stop_fn returns true
+    MAX_EPOCH           = 50_000
     RUNNING_AVERAGE_LEN = 10
     CHECKPOINT_FREQUENCY= 10
     LOG_DIR             = 'log/c4/'
-    EXPERIMENT_NAME     = 'dqn_vs_random'
+    EXPERIMENT_NAME     = 'sppo_vs_pre2'
 
 
     # ======== Step 1: Environment setup =========
@@ -67,8 +68,28 @@ if __name__ == "__main__":
     train_envs.seed(seed)
     test_envs.seed(seed)
 
+
+    # log/c4/sppo_vs_pre/ckpt/21-05-23-22_49_49_ckpt_1.pth
+    # log/c4/sppo_vs_pre/ckpt/21-05-23-22_49_49_ckpt_0.pth
+
+    # path1 = "log/c4/sppo_vs_rand/ckpt/21-05-23-01_20_52_ckpt_1.pth"
+    # path2 = "log/c4/sppo_vs_rand/ckpt/21-05-23-01_20_52_ckpt_1.pth"
+
+
+    path1 = "log/c4/sppo_vs_pre/ckpt/21-05-23-22_49_49_ckpt_1.pth"
+    path2 = "log/c4/sppo_vs_pre/ckpt/21-05-23-22_49_49_ckpt_1.pth"
+
+    sppo = make_ppo_agent(softmax=True)
+    sppo.load_state_dict(torch.load(path1))
+
+    sppo2 = make_ppo_agent(softmax=True)
+    sppo2.load_state_dict(torch.load(path2))
+
     # ======== Step 2: Agent setup =========
-    policy, agents = _get_multi_agents(make_dqn_agent, RandomPolicy)
+    policy, agents = _get_multi_agents(
+        agent_learn = lambda : sppo, 
+        agent_opponent = lambda: sppo2, 
+    )
 
     # ======== Step 3: Collector setup =========
     train_collector = Collector(
@@ -91,11 +112,14 @@ if __name__ == "__main__":
     def save_checkpoint_fn(epoch, env_step, gradient_step):
         ckpt_path = None
         if epoch % CHECKPOINT_FREQUENCY == 0:
-            ckpt_path = os.path.join(LOG_DIR, "ckpt", EXPERIMENT_NAME, "policy_checkpoint_0_{:03d}.pth".format(epoch))
-            ckpt_path2 = os.path.join(LOG_DIR, "ckpt", EXPERIMENT_NAME, "policy_checkpoint_1_{:03d}.pth".format(epoch))
-            os.makedirs(os.path.join(LOG_DIR, "ckpt", EXPERIMENT_NAME), exist_ok=True)
+            os.makedirs(os.path.join(LOG_DIR , EXPERIMENT_NAME, "ckpt"), exist_ok=True)
             
+            fn1 = datetime.now().strftime(r'%d-%m-%y-%H_%M_%S_ckpt_1.pth')
+            ckpt_path2 = os.path.join(LOG_DIR, EXPERIMENT_NAME, "ckpt", fn1)
             torch.save(policy.policies[agents[1]].state_dict(), ckpt_path2)
+            
+            fn0 = datetime.now().strftime(r'%d-%m-%y-%H_%M_%S_ckpt_0.pth')
+            ckpt_path = os.path.join(LOG_DIR , EXPERIMENT_NAME, "ckpt", fn0)
             torch.save(policy.policies[agents[0]].state_dict(), ckpt_path)
 
         return ckpt_path
@@ -120,7 +144,7 @@ if __name__ == "__main__":
     print("Beginning training!")
 
     # ======== Step 5: Run the trainer =========
-    result = offpolicy_trainer(
+    result = onpolicy_trainer(
         policy=policy,
         train_collector=train_collector,
         test_collector=test_collector,
@@ -128,9 +152,10 @@ if __name__ == "__main__":
         step_per_epoch=1000,
         step_per_collect=N_TRAIN_ENVS*5,
         episode_per_test=15,
+        repeat_per_collect=4, # Number of times the same batch is fed through the learning pipeline
         batch_size=BATCH_SIZE,
-        train_fn=train_fn,
-        test_fn=test_fn,
+        # train_fn=train_fn,
+        # test_fn=test_fn,
         # stop_fn=stop_fn,
         # save_best_fn=save_best_fn,
         save_checkpoint_fn= save_checkpoint_fn,
