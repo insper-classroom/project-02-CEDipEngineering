@@ -1,0 +1,8 @@
+torch
+pettingzoo
+gymnasium
+ipykernel
+pygame
+matplotlib
+tianshou
+tk
